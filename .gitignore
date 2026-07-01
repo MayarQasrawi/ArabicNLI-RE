@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environments
+.venv/
+venv/
+.env
+
+# HuggingFace / model checkpoints
+outputs/
+cls_train_*/
+*.bin
+*.safetensors
+
+# Raw data (full dataset — too large for the repo)
+data/raw/*.jsonl
+
+# NLI sample data IS committed (data/nli/ is tracked)
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

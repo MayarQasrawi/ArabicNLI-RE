@@ -1,0 +1,47 @@
+# NLI-RE Configuration
+# All hyperparameters for the NLI-Based Relation Extraction pipeline (Section 3).
+
+model:
+  name: "UBC-NLP/ARBERTv2"  # Sentence encoder T (Section 3, §Sentence Encoder)
+  max_len: 128               # Maximum sub-word token length for [CLS] s [SEP] h (Eq. 1)
+  num_folds: 2               # K in Stratified K-Fold cross-validation
+
+training:
+  learning_rate: 2e-5
+  per_device_train_batch_size: 16
+  per_device_eval_batch_size: 128
+  gradient_accumulation_steps: 2
+  num_train_epochs: 2
+  warmup_ratio: 0
+  seed: 123
+  fp16: false
+
+loss:
+  tau: 1.0             # Temperature τ controlling sharpness of L_NCE (Eq. 4)
+  class_weights:       # [w_n, w_p] for L_WCE (Eq. 3)
+    - 0.2              # w_n: weight for negative instances (relation absent)
+    - 1.0              # w_p: weight for positive instances (relation present)
+
+data:
+  # Raw RE records (full dataset — not committed to the repo)
+  raw_train_path: "data/raw/train.jsonl"
+
+  # Pre-built NLI pairs (samples committed to the repo)
+  train_path:   "data/nli/train.jsonl"
+  dev_path:     "data/nli/val.jsonl"
+  test_path:    "data/nli/test.jsonl"
+
+  data_column:  "nli_sentence"  # Pre-built [CLS] s [SEP] h string column
+  label_column: "Label"         # Binary entailment label: True / False
+
+  # Sampling settings for prepare_data.py
+  n_positive: 200   # True instances to sample
+  n_negative: 200   # False instances to sample
+  train_ratio: 0.70
+  val_ratio:   0.15
+  seed: 42
+
+output:
+  base_dir:               "outputs"
+  predictions_file:       "predictions.jsonl"
+  false_predictions_file: "false_predictions.jsonl"
