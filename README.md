@@ -1,6 +1,6 @@
 # NLI-RE: Arabic Relation Extraction as Natural Language Inference
 
-Implementation of **NLI-RE**, a framework that reformulates relation extraction (RE) as a Natural Language Inference (NLI) task. Given an input sentence *s* containing two named entity mentions *n_i* and *n_j*, NLI-RE treats *s* as the premise and automatically constructs a hypothesis by verbalizing a candidate relation *r* between *n_i* and *n_j* using a predefined Arabic template. A transformer encoder then predicts whether the premise **entails** the hypothesis — indicating the presence of relation *r* between the entity pair.
+**NLI-RE** reformulates relation extraction (RE) as a Natural Language Inference (NLI) task. Given an input sentence containing two named entity mentions, the sentence is treated as the premise and a hypothesis is constructed by verbalizing a candidate relation between the two entities using a predefined Arabic template. A transformer encoder then predicts whether the premise entails the hypothesis, indicating the presence of that relation between the entity pair.
 
 ---
 
@@ -12,48 +12,47 @@ Implementation of **NLI-RE**, a framework that reformulates relation extraction 
 - [Dataset](#dataset)
 - [Configuration](#configuration)
 - [Usage](#usage)
+- [Citation](#citation)
 - [License](#license)
 
 ---
 
 ## Framework Overview
 
-NLI-RE proceeds through three steps (Section 3):
+NLI-RE consists of three steps:
 
 ### 1. Template Construction
-For each of the **40 relation types**, a relation-aware Arabic template `T_r(e1, e2)` verbalizes a candidate relation between subject entity `e1` and object entity `e2` into a hypothesis string `h`. For example:
+For each of the **40 relation types**, a relation-aware Arabic template maps a candidate relation between subject entity `e1` and object entity `e2` into a hypothesis string. For example:
 
-| Relation | Subject | Object | Hypothesis h |
+| Relation | Subject | Object | Hypothesis |
 |---|---|---|---|
-| `Location.located_in` | قبة الصخرة | مدينة القدس | قبة الصخرة يقع في مدينة القدس |
-| `Personal.has_occupation` | حبيب بولس | مدير مال عكا | حبيب بولس يعمل مدير مال عكا |
+| `Location.located_in` | قبة الصخرة | مدينة القدس | قبة الصخرة تقع في مدينة القدس |
+| `Personal.has_occupation` | حبيب بولس | مدير مال عكا | حبيب بولس يعمل كـ / مهنته مدير مال عكا |
 | `Affiliation.member_of` | أطباء بلا حدود | الأمم المتحدة | أطباء بلا حدود عضو في الأمم المتحدة |
 
-### 2. Sentence Encoder
-A transformer encoder `T` (UBC-NLP/ARBERTv2) processes the concatenated premise-hypothesis pair:
+### 2. Sentence Encoding
+A transformer encoder (UBC-NLP/ARBERTv2) processes the concatenated premise-hypothesis pair:
 
 ```
-H = T([CLS] s [SEP] h)
+[CLS] sentence [SEP] hypothesis
 ```
 
 ### 3. Relation Inference
-The feature vector `H` is passed through a fully connected layer:
+The encoded representation is passed through a fully connected layer producing a binary prediction:
 
-```
-ŷ_i = σ(H W + b)
-```
-
-**True** → relation `r` exists between `(n_i, n_j)` in `s`.  
-**False** → relation `r` does not exist.
+- **True** → the relation holds between the entity pair in the sentence
+- **False** → the relation does not hold
 
 ### Training Objective
+
+The model is trained with a combined loss to handle class imbalance between positive (relation present) and negative (relation absent) instances:
 
 ```
 Loss = L_WCE + L_NCE
 ```
 
-**L_WCE** (Eq. 3) — Weighted Cross-Entropy with `[w_n, w_p]` to address class imbalance.  
-**L_NCE** (Eq. 4) — Noise Contrastive Estimation with temperature `τ` to improve discrimination.
+- **L_WCE** — Weighted Cross-Entropy with per-class weights `[w_n, w_p]`, where `w_p > w_n` penalises missed positive instances more heavily.
+- **L_NCE** — Noise Contrastive Estimation with temperature `τ` to improve separation between positive and negative instances.
 
 ---
 
@@ -63,22 +62,22 @@ Loss = L_WCE + L_NCE
 arabic-nli-classifier/
 │
 ├── configs/
-│   └── config.yaml                  # All hyperparameters and paths
+│   └── config.yaml                  # Hyperparameters and paths
 │
 ├── data/
-│   ├── nli/                         # ✅ Committed — NLI sample pairs (train/val/test)
-│   │   ├── train.jsonl              #    280 premise-hypothesis pairs
-│   │   ├── val.jsonl                #     60 pairs
-│   │   └── test.jsonl               #     60 pairs
-│   └── raw/                         # ❌ Not committed — place full dataset here
-│       └── train.jsonl              #    Full RE records (sentence/subject/object/relation)
+│   ├── nli/                         # NLI pairs included in the repository
+│   │   ├── train.jsonl              # 280 premise-hypothesis pairs
+│   │   ├── val.jsonl                #  60 pairs
+│   │   └── test.jsonl               #  60 pairs
+│   └── raw/                         # Place full dataset here (not committed)
+│       └── train.jsonl
 │
 ├── src/
 │   ├── data/
-│   │   ├── templates.py             # 40 Arabic relation verbalization templates T_r
+│   │   ├── templates.py             # 40 Arabic relation verbalization templates
 │   │   ├── nli_generator.py         # Generates [CLS] s [SEP] h pairs from RE records
-│   │   ├── dataset.py               # PyTorch Dataset — Sentence Encoder input (Eq. 1)
-│   │   └── loader.py                # Loads NLI JSONL splits into DataFrames
+│   │   ├── dataset.py               # PyTorch Dataset for NLI sentence pairs
+│   │   └── loader.py                # Loads NLI JSONL splits
 │   │
 │   ├── models/
 │   │   └── trainer.py               # ContrastiveTrainer: Loss = L_WCE + L_NCE
@@ -87,20 +86,15 @@ arabic-nli-classifier/
 │   │   └── cross_val.py             # Stratified K-Fold fine-tuning loop
 │   │
 │   ├── evaluation/
-│   │   └── metrics.py               # Micro-F1, ensemble inference, JSONL reporting
+│   │   └── metrics.py               # Micro-F1, ensemble inference, reporting
 │   │
 │   └── utils/
 │       └── helpers.py               # Seed control, label maps, config loader
 │
 ├── scripts/
-│   ├── prepare_data.py              # Step 0: generate NLI pairs from raw RE records
-│   ├── train.py                     # Step 1: K-Fold training
-│   └── predict.py                   # Step 2: ensemble inference
-│
-├── tests/
-│   ├── test_dataset.py
-│   ├── test_metrics.py
-│   └── test_loss.py
+│   ├── prepare_data.py              # Prepare NLI pairs from raw RE records
+│   ├── train.py                     # Run K-Fold training
+│   └── predict.py                   # Run ensemble inference
 │
 ├── requirements.txt
 ├── setup.py
@@ -112,8 +106,8 @@ arabic-nli-classifier/
 ## Installation
 
 ```bash
-git clone https://github.com/aaljabari/arabic-nli-re.git
-cd arabic-nli-re
+git clone https://github.com/alaa-aljabari/ArabicNLI-RE.git
+cd ArabicNLI-RE
 
 python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
@@ -125,9 +119,9 @@ pip install -r requirements.txt
 
 ## Dataset
 
-### Included sample (ready to use)
+### Included sample
 
-The repository includes a balanced sample of **400 NLI pairs** in `data/nli/`:
+The repository includes a sample of **400 NLI pairs** in `data/nli/`:
 
 | File | Pairs | True | False |
 |---|---|---|---|
@@ -135,7 +129,7 @@ The repository includes a balanced sample of **400 NLI pairs** in `data/nli/`:
 | `val.jsonl`   |  60 |  38 |  22 |
 | `test.jsonl`  |  60 |  30 |  30 |
 
-Each record contains exactly two fields:
+Each record contains:
 
 ```json
 {
@@ -144,7 +138,17 @@ Each record contains exactly two fields:
 }
 ```
 
-### Using your own full dataset
+### Full dataset (WojoodRelations)
+
+The full **WojoodRelations** dataset is available via registration:
+
+> 📥 [Download WojoodRelations](https://docs.google.com/forms/d/e/1FAIpQLSdtN7OtVQBkRYktpnHd8xmyLi_KP2eZHc4T41IaWtIAptM4mw/viewform)
+
+Tools, datasets, and models are also available through the online demo:
+
+> 🔗 [Arabic Relation Extraction Tools, Datasets and Models](https://sina.birzeit.edu/relations/)
+
+### Using your own data
 
 Place your raw RE records at `data/raw/train.jsonl`, then run:
 
@@ -203,11 +207,18 @@ python scripts/train.py --config configs/config.yaml
 # Step 2 — predict
 python scripts/predict.py --config configs/config.yaml
 ```
+
+### Google Colab
+
+A ready-to-run Colab notebook is available. Click the badge below to open it directly:
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1ZRRdWUaX_bNSiJ_61gV-Cp4oscdN_Lpn)
+
 ---
 
 ## Citation
 
-If you use this code or the dataset in your research, please cite the following papers:
+If you use this code or the dataset in your research, please cite:
 
 ```bibtex
 @inproceedings{aljabari-etal-2025-wojoodrelations,
@@ -259,6 +270,7 @@ If you use this code or the dataset in your research, please cite the following 
     pages = "309--319",
 }
 ```
+
 ---
 
 ## License
