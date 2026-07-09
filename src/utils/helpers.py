@@ -45,19 +45,33 @@ def build_label_maps(label_list: List[str]) -> tuple[Dict[str, int], Dict[int, s
     """
     Build forward and inverse label mappings for the binary entailment task.
 
-    The NLI-RE Relation Inference layer outputs a score ŷ_i whose argmax 
+    The NLI-RE Relation Inference layer outputs a score ŷ_i whose argmax
     index is mapped back to a human-readable label via these dicts.
 
+    The mapping is kept deterministic and explicit for binary labels:
+    - False -> 0
+    - True  -> 1
+
     Args:
-        label_list: Ordered list of unique entailment labels,
-                    e.g. ["True", "False"] or ["False", "True"].
+        label_list: List of unique entailment labels, e.g. ["True", "False"]
+                    or ["False", "True"].
 
     Returns:
         Tuple of:
-          - label_map     : str → int  (e.g. {"True": 1, "False": 0})
-          - inv_label_map : int → str  (e.g. {1: "True", 0: "False"})
+          - label_map     : str → int  (e.g. {"False": 0, "True": 1})
+          - inv_label_map : int → str  (e.g. {0: "False", 1: "True"})
     """
-    label_map: Dict[str, int] = {v: int(i) for i, v in enumerate(label_list)}
+    ordered_labels = ["False", "True"]
+    label_map: Dict[str, int] = {}
+
+    for idx, label in enumerate(ordered_labels):
+        if label in label_list:
+            label_map[label] = idx
+
+    for label in label_list:
+        if label not in label_map:
+            label_map[label] = len(label_map)
+
     inv_label_map: Dict[int, str] = {v: k for k, v in label_map.items()}
     return label_map, inv_label_map
 
