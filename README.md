@@ -212,7 +212,7 @@ python scripts/predict.py --config configs/config.yaml
 
 A ready-to-run Colab notebook is available. Click the badge below to open it directly:
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1ZRRdWUaX_bNSiJ_61gV-Cp4oscdN_Lpn)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1F1Sy6hmuNRk_fYYyV_WLcj9D-bcCwbOK#scrollTo=Cbi_BcU2usr4)
 
 ---
 
